@@ -1,0 +1,10 @@
+# Xcode
+
+## Project files
+*.xcworkspace
+
+## Various settings
+xcuserdata/
+
+# CocoaPods
+Pods/
