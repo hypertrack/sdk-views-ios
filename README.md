@@ -103,7 +103,3 @@ let cancel = hyperTrackViews.subscribeToMovementStatusUpdates(for: "Paste_Your_D
 You need to hold on to the `cancel()` function until you don't need subscription results. If this function gets out of scope, subscription will automatically cancel and all network resources and memory will be released. This is useful if subscription is needed only while some view or controller is in scope.
 
 #### You are all set
-
-## Using MovementStatus structure to update your UI
-
-
