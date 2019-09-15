@@ -1,5 +1,10 @@
 # HyperTrack Views for iOS
 
+![GitHub](https://img.shields.io/github/license/hypertrack/views-ios.svg)
+![Cocoapods platforms](https://img.shields.io/cocoapods/p/HyperTrackViews.svg)
+[![HyperTrackViews](https://img.shields.io/cocoapods/v/HyperTrackViews)](https://cocoapods.org/pods/HyperTrackViews)
+
+
 HyperTrack Views library is used for getting live location and movement data for devices and trips directly to your iOS app. Library subscribes to HyperTrack's GraphQL server endpoints to get data streams and then renders it in useful callbacks for app developers to build beautiful tracking experiences. This helps developers create live location views and go serverless. Their app users can directly get data securely and privately from the HyperTrack servers.
 
 ## Run example app
