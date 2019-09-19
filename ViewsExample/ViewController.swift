@@ -44,7 +44,15 @@ class ViewController: UIViewController {
                 }
                 
                 let regionRadius: CLLocationDistance = 1000
-                let coordinateRegion = MKCoordinateRegion(center: coordinate, latitudinalMeters: regionRadius, longitudinalMeters: regionRadius)
+                
+                let coordinateRegion: MKCoordinateRegion
+                #if swift(>=4.0)
+                coordinateRegion = MKCoordinateRegion(center: coordinate, latitudinalMeters: regionRadius, longitudinalMeters: regionRadius)
+                #else
+                // If you switch Swift language to 3.0 in Xcode 10.1 this line will run
+                coordinateRegion = MKCoordinateRegionMakeWithDistance(coordinate, regionRadius, regionRadius)
+                #endif
+                
                 self.mapView.setRegion(coordinateRegion, animated: true)
             case .failure(let error):
                 dump(error)

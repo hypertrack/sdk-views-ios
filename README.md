@@ -108,3 +108,44 @@ let cancel = hyperTrackViews.subscribeToMovementStatusUpdates(for: "Paste_Your_D
 You need to hold on to the `cancel()` function until you don't need subscription results. If this function gets out of scope, subscription will automatically cancel and all network resources and memory will be released. This is useful if subscription is needed only while some view or controller is in scope.
 
 #### You are all set
+
+## Frequently Asked Questions
+
+### Does it support Xcode 10.1?
+
+If you want to run the project on Xcode 10.1 that doesn't support Swift 5, you need to add this post_install script at the end of your Podfile. For this project you can copy-paste the whole thing:
+
+```ruby
+platform :ios, '9.0'
+
+target 'ViewsExample' do
+  use_frameworks!
+
+  pod 'HyperTrackViews'
+
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    if ['HyperTrackViews', 'AWSCore', 'AWSAppSync', 'ReachabilitySwift', 'SQLite.swift'].include? target.name
+      target.build_configurations.each do |config|
+        config.build_settings['SWIFT_VERSION'] = '4.2'
+      end
+    end
+  end
+end
+```
+
+This script will set Swift 4.2 for all HyperTrackViews dependencies, so you don't need to do this every time.
+
+Then you need to go to the Pods project inside the workspace then `Pods > SQLite.swift > standard > Foundation.swift` and change `datatypeValue` function to:
+
+```swift
+public var datatypeValue: Blob {
+    return withUnsafeBytes { (pointer: UnsafePointer<UInt8>) -> Blob in
+        return Blob(bytes: pointer, length: count)
+    }
+}
+```
+
+Select `Unlock` when Xcode prompts, then build the project. You'll need to change `datatypeValue` function every pod reinstall, until [this issue](https://github.com/stephencelis/SQLite.swift/issues/920) is closed.
