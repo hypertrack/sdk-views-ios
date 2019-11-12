@@ -45,40 +45,40 @@ class DeviceAnnotationView: MKAnnotationView {
   override func draw(_ rect: CGRect) {
     //// General Declarations
     let context = UIGraphicsGetCurrentContext()!
-
+    
     //// Color Declarations
     let green = UIColor(red: 0.314, green: 0.890, blue: 0.761, alpha: 1.000)
     let fillColor = UIColor(red: 1.000, green: 1.000, blue: 1.000, alpha: 1.000)
-
+    
     //// Variable Declarations
     let rotation: CGFloat = -bearing
     let noCourse = bearing != -1 ? true : false
-
+    
     //// InnerDot
     //// Dot Drawing
     let dotPath = UIBezierPath(ovalIn: CGRect(x: 0, y: 0, width: 34, height: 34))
     green.setFill()
     dotPath.fill()
-
-
+    
+    
     if (noCourse) {
-        //// Arrow Drawing
-        context.saveGState()
-        context.translateBy(x: 17, y: 17)
-        context.rotate(by: -rotation * CGFloat.pi/180)
-
-        let arrowPath = UIBezierPath()
-        arrowPath.move(to: CGPoint(x: 0, y: -8))
-        arrowPath.addLine(to: CGPoint(x: -7, y: 5))
-        arrowPath.addCurve(to: CGPoint(x: 0, y: 3), controlPoint1: CGPoint(x: -7, y: 5), controlPoint2: CGPoint(x: -4, y: 3))
-        arrowPath.addCurve(to: CGPoint(x: 7, y: 5), controlPoint1: CGPoint(x: 4, y: 3), controlPoint2: CGPoint(x: 7, y: 5))
-        arrowPath.addLine(to: CGPoint(x: 0, y: -8))
-        arrowPath.close()
-        arrowPath.usesEvenOddFillRule = true
-        fillColor.setFill()
-        arrowPath.fill()
-
-        context.restoreGState()
+      //// Arrow Drawing
+      context.saveGState()
+      context.translateBy(x: 17, y: 17)
+      context.rotate(by: -rotation * CGFloat.pi/180)
+      
+      let arrowPath = UIBezierPath()
+      arrowPath.move(to: CGPoint(x: 0, y: -8))
+      arrowPath.addLine(to: CGPoint(x: -7, y: 5))
+      arrowPath.addCurve(to: CGPoint(x: 0, y: 3), controlPoint1: CGPoint(x: -7, y: 5), controlPoint2: CGPoint(x: -4, y: 3))
+      arrowPath.addCurve(to: CGPoint(x: 7, y: 5), controlPoint1: CGPoint(x: 4, y: 3), controlPoint2: CGPoint(x: 7, y: 5))
+      arrowPath.addLine(to: CGPoint(x: 0, y: -8))
+      arrowPath.close()
+      arrowPath.usesEvenOddFillRule = true
+      fillColor.setFill()
+      arrowPath.fill()
+      
+      context.restoreGState()
     }
   }
 }
@@ -113,16 +113,16 @@ class DestinationAnnotationView: MKAnnotationView {
   override func draw(_ rect: CGRect) {
     //// General Declarations
     let context = UIGraphicsGetCurrentContext()!
-
+    
     //// Color Declarations
     let shadowColor = UIColor(red: 0.290, green: 0.290, blue: 0.290, alpha: 0.500)
-
+    
     //// Shadow Declarations
     let shadow = NSShadow()
     shadow.shadowColor = shadowColor
     shadow.shadowOffset = CGSize(width: 0, height: 1)
     shadow.shadowBlurRadius = 4
-
+    
     //// Rectangle Drawing
     let rectanglePath = UIBezierPath(roundedRect: CGRect(x: 4, y: 5, width: 18, height: 18), cornerRadius: 5)
     context.saveGState()
@@ -130,9 +130,9 @@ class DestinationAnnotationView: MKAnnotationView {
     UIColor.black.setFill()
     rectanglePath.fill()
     context.restoreGState()
-
-
-
+    
+    
+    
     //// Oval Drawing
     let ovalPath = UIBezierPath(ovalIn: CGRect(x: 9.5, y: 10.5, width: 7, height: 7))
     UIColor.white.setFill()
@@ -201,7 +201,7 @@ func putDevice(withCoordinate coordinate: CLLocationCoordinate2D, bearing: CGFlo
       mapView.addOverlay(accuracyCircleOverlay)
     }
   }
-
+  
 }
 
 extension Array where Element: AnyObject {
@@ -258,7 +258,7 @@ func putTrip(
     let combinedPolyline = [coordinate] + polyline + [destinationCoordinate]
     mapView.addOverlay(MKPolyline(coordinates: combinedPolyline, count: combinedPolyline.count))
   }
-
+  
 }
 
 func remove<Overlay: MKOverlay>(overlay: Overlay.Type, fromMapView mapView: MKMapView) {
@@ -292,7 +292,10 @@ func zoom(on target: ZoomTarget, paddingRadius: UInt16?, onMapView mapView:MKMap
   case .trip:
     if let deviceAnnotation = mapView.annotations.first(ofType: DeviceAnnotation.self) {
       if let polylineOverlay = mapView.overlays.first(ofType: MKPolyline.self) {
-        break
+        
+        let coordinateRegion = regionFromCoordinates(coordinatesFromMultiPoint(polylineOverlay) + [deviceAnnotation.coordinate])
+        
+        mapView.setRegion(coordinateRegion, animated: animated)
       } else {
         let regionRadius = CLLocationDistance(paddingRadius ?? 400)
         let coordinateRegion = MKCoordinateRegion(center: deviceAnnotation.coordinate, latitudinalMeters: regionRadius, longitudinalMeters: regionRadius)
@@ -302,6 +305,56 @@ func zoom(on target: ZoomTarget, paddingRadius: UInt16?, onMapView mapView:MKMap
     }
   case .coordinate(_):
     break
+  }
+}
+
+func coordinatesFromMultiPoint(_ multiPoint: MKMultiPoint) -> [CLLocationCoordinate2D] {
+  var coordinates = [CLLocationCoordinate2D](
+    repeating: kCLLocationCoordinate2DInvalid,
+    count: multiPoint.pointCount
+  )
+  multiPoint.getCoordinates(&coordinates, range: NSRange(location: 0, length: multiPoint.pointCount))
+  
+  return coordinates
+}
+
+typealias CoordinateRange = (minLat: CLLocationDegrees, maxLat: CLLocationDegrees, minLon: CLLocationDegrees, maxLon: CLLocationDegrees)
+
+func regionFromCoordinates(_ coordinates: [CLLocationCoordinate2D]) -> MKCoordinateRegion {
+  let coordinateRange = rangeFromCoordinates(coordinates)
+  
+  let span = MKCoordinateSpan(
+    latitudeDelta: coordinateRange.maxLat - coordinateRange.minLat,
+    longitudeDelta: coordinateRange.maxLon - coordinateRange.minLon
+  )
+  let center = CLLocationCoordinate2DMake(
+    coordinateRange.maxLat - span.latitudeDelta / 2.0,
+    coordinateRange.maxLon - span.longitudeDelta / 2.0
+  )
+  return MKCoordinateRegion(center: center, span: span)
+}
+
+func rangeFromCoordinates(_ coordinates: [CLLocationCoordinate2D]) -> CoordinateRange {
+  return coordinates.reduce((minLat: 90.0, maxLat: -90.0, minLon: 180.0, maxLon: -180.0)) { (coordinateRange, coordinate) -> CoordinateRange in
+    
+    var (minLat, maxLat, minLon, maxLon) = coordinateRange
+    
+    let lat = Double(coordinate.latitude)
+    let long = Double(coordinate.longitude)
+    
+    if lat < minLat {
+      minLat = lat
+    }
+    if long < minLon {
+      minLon = long
+    }
+    if lat > maxLat {
+      maxLat = lat
+    }
+    if long > maxLon {
+      maxLon = long
+    }
+    return (minLat, maxLat, minLon, maxLon)
   }
 }
 
