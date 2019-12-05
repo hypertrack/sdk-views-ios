@@ -185,7 +185,7 @@ enum HyperTrackView {
 
 func putDevice(withCoordinate coordinate: CLLocationCoordinate2D, bearing: CGFloat, accuracy: CLLocationAccuracy, onMapView mapView: MKMapView) {
   
-  if let deviceAnnotation = mapView.annotations.first(ofType: DeviceAnnotation.self) {
+  if let deviceAnnotation = device(fromMapView: mapView) {
     deviceAnnotation.coordinate = coordinate
     deviceAnnotation.bearing = bearing
   } else {
@@ -195,7 +195,7 @@ func putDevice(withCoordinate coordinate: CLLocationCoordinate2D, bearing: CGFlo
   remove(overlay: MKCircle.self, fromMapView: mapView)
   if accuracy > 0 {
     let accuracyCircleOverlay = MKCircle(center: coordinate, radius: accuracy)
-    if let polylineOverlay = mapView.overlays.first(ofType: MKPolyline.self) {
+    if let polylineOverlay = polyline(fromMapView: mapView) {
       mapView.insertOverlay(accuracyCircleOverlay, above: polylineOverlay)
     } else {
       mapView.addOverlay(accuracyCircleOverlay)
@@ -273,39 +273,95 @@ func remove<Annotation: MKAnnotation>(annotation: Annotation.Type, fromMapView m
   }
 }
 
-enum ZoomTarget {
-  case device
-  case trip
-  case coordinate(CLLocationCoordinate2D)
+enum Edges {
+  typealias Amount = UInt16
+  
+  case all(Amount)
+  case bottom(Amount)
+  case custom(top: Amount, leading: Amount, bottom: Amount, trailing: Amount)
+  case horizontal(Amount)
+  case leading(Amount)
+  case top(Amount)
+  case trailing(Amount)
+  case vertical(Amount)
+  
+  func unpack() -> (top: Amount, leading: Amount, bottom: Amount, trailing: Amount) {
+    switch self {
+    case let .all(amount):
+      return (amount, amount, amount, amount)
+    case let .bottom(amount):
+      return (0, 0, amount, 0)
+    case let .custom(top, leading, bottom, trailing):
+      return (top, leading, bottom, trailing)
+    case let .horizontal(amount):
+      return (0, amount, 0, amount)
+    case let .leading(amount):
+      return (0, amount, 0, 0)
+    case let .top(amount):
+      return (amount, 0, 0, 0)
+    case let .trailing(amount):
+      return (0, 0, 0, amount)
+    case let .vertical(amount):
+      return (amount, 0, amount, 0)
+    }
+  }
 }
 
-func zoom(on target: ZoomTarget, paddingRadius: UInt16?, onMapView mapView:MKMapView, animated: Bool = true) {
-  switch target {
-  case .device:
-    if let deviceAnnotation = mapView.annotations.first(ofType: DeviceAnnotation.self) {
-      
-      let regionRadius = CLLocationDistance(paddingRadius ?? 400)
-      let coordinateRegion = MKCoordinateRegion(center: deviceAnnotation.coordinate, latitudinalMeters: regionRadius, longitudinalMeters: regionRadius)
-      
-      mapView.setRegion(coordinateRegion, animated: animated)
+
+func mapRectFromCoordinates(_ coordinates: [CLLocationCoordinate2D]) -> MKMapRect {
+  let rects = coordinates.lazy.map { MKMapRect(origin: MKMapPoint($0), size: MKMapSize()) }
+  return rects.reduce(MKMapRect.null) { $0.union($1) }
+}
+
+func zoom(withMapInsets mapInsets: Edges?, interfaceInsets: Edges?, onMapView mapView: MKMapView, animated: Bool = true) {
+  if let polyline = polyline(fromMapView: mapView) {
+    let deviceAnnotation = device(fromMapView: mapView)
+    let polylineCoordinates = coordinatesFromMultiPoint(polyline)
+    let coordinates = deviceAnnotation != nil ? polylineCoordinates + [deviceAnnotation!.coordinate] : polylineCoordinates
+    var mapRect = mapRectFromCoordinates(coordinates)
+    if let mapInsets = mapInsets {
+      mapRect = outset(mapRect: mapRect, withEdges: mapInsets)
     }
-  case .trip:
-    if let deviceAnnotation = mapView.annotations.first(ofType: DeviceAnnotation.self) {
-      if let polylineOverlay = mapView.overlays.first(ofType: MKPolyline.self) {
-        
-        let coordinateRegion = regionFromCoordinates(coordinatesFromMultiPoint(polylineOverlay) + [deviceAnnotation.coordinate])
-        
-        mapView.setRegion(coordinateRegion, animated: animated)
-      } else {
-        let regionRadius = CLLocationDistance(paddingRadius ?? 400)
-        let coordinateRegion = MKCoordinateRegion(center: deviceAnnotation.coordinate, latitudinalMeters: regionRadius, longitudinalMeters: regionRadius)
-        
-        mapView.setRegion(coordinateRegion, animated: animated)
-      }
+    if let interfaceInsets = interfaceInsets {
+      let (top, leading, bottom, trailing) = interfaceInsets.unpack()
+      mapView.setVisibleMapRect(mapRect, edgePadding: UIEdgeInsets(top: CGFloat(top), left: CGFloat(leading), bottom: CGFloat(bottom), right: CGFloat(trailing)), animated: animated)
+    } else {
+      mapView.setVisibleMapRect(mapRect, animated: animated)
     }
-  case .coordinate(_):
-    break
+  } else if let device = device(fromMapView: mapView) {
+    var mapRect = MKMapRect(origin: MKMapPoint(device.coordinate), size: MKMapSize())
+    let edges = mapInsets ?? .all(400)
+    mapRect = outset(mapRect: mapRect, withEdges: edges)
+    if let interfaceInsets = interfaceInsets {
+      let (top, leading, bottom, trailing) = interfaceInsets.unpack()
+      mapView.setVisibleMapRect(mapRect, edgePadding: UIEdgeInsets(top: CGFloat(top), left: CGFloat(leading), bottom: CGFloat(bottom), right: CGFloat(trailing)), animated: animated)
+    } else {
+      mapView.setVisibleMapRect(mapRect, animated: animated)
+    }
   }
+}
+
+func outset(mapRect: MKMapRect, withEdges edges: Edges) -> MKMapRect {
+  let (top, leading, bottom, trailing) = edges.unpack()
+  let pointsPerMeter = MKMapPointsPerMeterAtLatitude(mapRect.origin.coordinate.latitude)
+  let topPoints = Double(top) * pointsPerMeter
+  let leadingPoints = Double(leading) * pointsPerMeter
+  let bottomPoints = Double(bottom) * pointsPerMeter
+  let trailingPoints = Double(trailing) * pointsPerMeter
+  return MKMapRect(
+    x: mapRect.minX - leadingPoints,
+    y: mapRect.minY - topPoints,
+    width: mapRect.width + leadingPoints + trailingPoints,
+    height: mapRect.height + topPoints + bottomPoints
+  )
+}
+
+func device(fromMapView mapView: MKMapView) -> DeviceAnnotation? {
+  return mapView.annotations.first(ofType: DeviceAnnotation.self)
+}
+
+func polyline(fromMapView mapView: MKMapView) -> MKPolyline? {
+  return mapView.overlays.first(ofType: MKPolyline.self)
 }
 
 func coordinatesFromMultiPoint(_ multiPoint: MKMultiPoint) -> [CLLocationCoordinate2D] {
@@ -320,50 +376,12 @@ func coordinatesFromMultiPoint(_ multiPoint: MKMultiPoint) -> [CLLocationCoordin
 
 typealias CoordinateRange = (minLat: CLLocationDegrees, maxLat: CLLocationDegrees, minLon: CLLocationDegrees, maxLon: CLLocationDegrees)
 
-func regionFromCoordinates(_ coordinates: [CLLocationCoordinate2D]) -> MKCoordinateRegion {
-  let coordinateRange = rangeFromCoordinates(coordinates)
-  
-  let span = MKCoordinateSpan(
-    latitudeDelta: coordinateRange.maxLat - coordinateRange.minLat,
-    longitudeDelta: coordinateRange.maxLon - coordinateRange.minLon
-  )
-  let center = CLLocationCoordinate2DMake(
-    coordinateRange.maxLat - span.latitudeDelta / 2.0,
-    coordinateRange.maxLon - span.longitudeDelta / 2.0
-  )
-  return MKCoordinateRegion(center: center, span: span)
-}
-
-func rangeFromCoordinates(_ coordinates: [CLLocationCoordinate2D]) -> CoordinateRange {
-  return coordinates.reduce((minLat: 90.0, maxLat: -90.0, minLon: 180.0, maxLon: -180.0)) { (coordinateRange, coordinate) -> CoordinateRange in
-    
-    var (minLat, maxLat, minLon, maxLon) = coordinateRange
-    
-    let lat = Double(coordinate.latitude)
-    let long = Double(coordinate.longitude)
-    
-    if lat < minLat {
-      minLat = lat
-    }
-    if long < minLon {
-      minLon = long
-    }
-    if lat > maxLat {
-      maxLat = lat
-    }
-    if long > maxLon {
-      maxLon = long
-    }
-    return (minLat, maxLat, minLon, maxLon)
-  }
-}
-
 func put(_ hyperTrackView: HyperTrackView, onMapView mapView: MKMapView) {
   switch hyperTrackView {
   case let .movementStatus(movementStatus):
     
     removeTripFrom(mapView: mapView)
-    
+    // TODO: убирать то что надо убирать
     putDevice(
       withCoordinate: movementStatus.location.coordinate,
       bearing: CGFloat(movementStatus.location.course),
