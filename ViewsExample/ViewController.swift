@@ -30,7 +30,7 @@ class ViewController: UIViewController, MKMapViewDelegate {
           put(.movementStatus(movementStatus), onMapView: self.mapView)
         }
         
-        zoom(withMapInsets: nil, interfaceInsets: .custom(top: 100, leading: 50, bottom: 300, trailing: 100), onMapView: self.mapView)
+        zoom(withMapInsets: .all(100), interfaceInsets: nil, onMapView: self.mapView)
         
       case .failure(let error):
         dump(error)

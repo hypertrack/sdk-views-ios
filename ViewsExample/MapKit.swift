@@ -255,10 +255,32 @@ func putTrip(
   
   remove(overlay: MKPolyline.self, fromMapView: mapView)
   if let polyline = polyline {
-    let combinedPolyline = [coordinate] + polyline + [destinationCoordinate]
+    let connectedCurrentLocation = connect(currentCoordinate: coordinate, toEstimatePolyline: polyline)
+    let combinedPolyline = connectedCurrentLocation + [destinationCoordinate]
     mapView.addOverlay(MKPolyline(coordinates: combinedPolyline, count: combinedPolyline.count))
   }
   
+}
+
+func connect(
+  currentCoordinate coordinate:CLLocationCoordinate2D,
+  toEstimatePolyline polyline: [CLLocationCoordinate2D]
+) -> [CLLocationCoordinate2D] {
+  if polyline.count <= 1 {
+    return [coordinate]
+  } else {
+    let minimumPosition = polyline.enumerated().map { ($0, MKMapPoint(coordinate).distance(to: MKMapPoint($1))) }.min { $0.1 < $1.1 }
+    if let minimumPosition = minimumPosition {
+      var mutPolyline = polyline
+      let position = minimumPosition.0
+      mutPolyline[position] = coordinate
+      let newPolyline = mutPolyline.suffix(from: position)
+      return Array(newPolyline)
+    } else {
+      // What does it even mean?
+      return [coordinate] + polyline
+    }
+  }
 }
 
 func remove<Overlay: MKOverlay>(overlay: Overlay.Type, fromMapView mapView: MKMapView) {
