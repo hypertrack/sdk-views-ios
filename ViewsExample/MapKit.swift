@@ -179,8 +179,8 @@ func annotationViewForAnnotation(_ annotation: MKAnnotation, onMapView mapView: 
 }
 
 enum HyperTrackView {
-  case movementStatus(MovementStatus)
-  case movementStatusWithTrip(MovementStatus, MovementStatus.Trip)
+  case location(CLLocation)
+  case locationWithTrip(CLLocation, MovementStatus.Trip)
 }
 
 func putDevice(withCoordinate coordinate: CLLocationCoordinate2D, bearing: CGFloat, accuracy: CLLocationAccuracy, onMapView mapView: MKMapView) {
@@ -400,24 +400,23 @@ typealias CoordinateRange = (minLat: CLLocationDegrees, maxLat: CLLocationDegree
 
 func put(_ hyperTrackView: HyperTrackView, onMapView mapView: MKMapView) {
   switch hyperTrackView {
-  case let .movementStatus(movementStatus):
+  case let .location(location):
     
     removeTripFrom(mapView: mapView)
-    // TODO: убирать то что надо убирать
     putDevice(
-      withCoordinate: movementStatus.location.coordinate,
-      bearing: CGFloat(movementStatus.location.course),
-      accuracy: movementStatus.location.horizontalAccuracy,
+      withCoordinate: location.coordinate,
+      bearing: CGFloat(location.course),
+      accuracy: location.horizontalAccuracy,
       onMapView: mapView)
     
-  case let .movementStatusWithTrip(movementStatus, trip):
+  case let .locationWithTrip(location, trip):
     
-    let coordinate = movementStatus.location.coordinate
+    let coordinate = location.coordinate
     
     putDevice(
       withCoordinate: coordinate,
-      bearing: CGFloat(movementStatus.location.course),
-      accuracy: movementStatus.location.horizontalAccuracy,
+      bearing: CGFloat(location.course),
+      accuracy: location.horizontalAccuracy,
       onMapView: mapView)
     
     if let destinationCoordinate = trip.destination?.coordinate {

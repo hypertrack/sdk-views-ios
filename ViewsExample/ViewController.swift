@@ -25,9 +25,9 @@ class ViewController: UIViewController, MKMapViewDelegate {
       case let .success(movementStatus):
         
         if let trip = movementStatus.trips.first {
-          put(.movementStatusWithTrip(movementStatus, trip), onMapView: self.mapView)
+          put(.locationWithTrip(movementStatus.location, trip), onMapView: self.mapView)
         } else {
-          put(.movementStatus(movementStatus), onMapView: self.mapView)
+          put(.location(movementStatus.location), onMapView: self.mapView)
         }
         
         zoom(withMapInsets: .all(100), interfaceInsets: nil, onMapView: self.mapView)
