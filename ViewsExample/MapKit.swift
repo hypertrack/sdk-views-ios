@@ -192,12 +192,13 @@ func putDevice(withCoordinate coordinate: CLLocationCoordinate2D, bearing: CGFlo
     mapView.addAnnotation(DeviceAnnotation(coordinate: coordinate, bearing: bearing))
   }
   
-  remove(overlay: MKCircle.self, fromMapView: mapView)
   if accuracy > 0 {
     let accuracyCircleOverlay = MKCircle(center: coordinate, radius: accuracy)
     if let polylineOverlay = polyline(fromMapView: mapView) {
+      remove(overlay: MKCircle.self, fromMapView: mapView)
       mapView.insertOverlay(accuracyCircleOverlay, above: polylineOverlay)
     } else {
+      remove(overlay: MKCircle.self, fromMapView: mapView)
       mapView.addOverlay(accuracyCircleOverlay)
     }
   }
@@ -426,6 +427,5 @@ func put(_ hyperTrackView: HyperTrackView, onMapView mapView: MKMapView) {
         polyline: trip.destination?.estimate?.route.polyline,
         onMapView: mapView)
     }
-    
   }
 }
