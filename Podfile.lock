@@ -4,7 +4,7 @@ PODS:
     - ReachabilitySwift (= 4.3.0)
     - SQLite.swift (= 0.11.6)
   - AWSCore (2.10.3)
-  - HyperTrackViews (0.3.1):
+  - HyperTrackViews (0.4.0):
     - AWSAppSync (= 2.14.1)
   - ReachabilitySwift (4.3.0)
   - SQLite.swift (0.11.6):
@@ -12,7 +12,7 @@ PODS:
   - SQLite.swift/standard (0.11.6)
 
 DEPENDENCIES:
-  - HyperTrackViews (= 0.3.1)
+  - HyperTrackViews (= 0.4.0)
 
 SPEC REPOS:
   https://cdn.cocoapods.org/:
@@ -25,10 +25,10 @@ SPEC REPOS:
 SPEC CHECKSUMS:
   AWSAppSync: 927eeb13bf6dc3559029f2e05c942da4573e65fc
   AWSCore: f9b8a30d9e8ec07d1a6dd8f0ec5fe84b6a215041
-  HyperTrackViews: b808f143de376c1e0107b6c1be12323961a84421
+  HyperTrackViews: 99164b778b99953509dcc8ff30b42176c6c9fe84
   ReachabilitySwift: 408477d1b6ed9779dba301953171e017c31241f3
   SQLite.swift: 46d890be8601964454bd3392527f863d1b802d45
 
-PODFILE CHECKSUM: 7ecddfa0284ef08722c01aff7bcc1bb04afeffbd
+PODFILE CHECKSUM: 2bc2faf37ab3cedea93d73a5cb3a323e76827e12
 
 COCOAPODS: 1.8.4

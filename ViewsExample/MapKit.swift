@@ -111,34 +111,73 @@ class DestinationAnnotationView: MKAnnotationView {
   }
   
   override func draw(_ rect: CGRect) {
+    drawMarker(isDestination: true)
+  }
+}
+
+class SourceAnnotation: NSObject, MKAnnotation {
+  let coordinate: CLLocationCoordinate2D
+  
+  init(coordinate: CLLocationCoordinate2D) {
+    self.coordinate = coordinate
+    
+    super.init()
+  }
+}
+
+class SourceAnnotationView: MKAnnotationView {
+  
+  init(annotation: MKAnnotation, reuseIdentifier: String) {
+    super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+    setup()
+  }
+  
+  required init?(coder aDecoder: NSCoder) {
+    super.init(coder: aDecoder)
+    setup()
+  }
+  
+  func setup() {
+    self.frame = CGRect.init(x: 0, y: 0, width: 26, height: 28)
+    self.backgroundColor = UIColor.clear
+  }
+  
+  override func draw(_ rect: CGRect) {
+    drawMarker(isDestination: false)
+  }
+}
+
+func drawMarker(isDestination: Bool = true) {
     //// General Declarations
     let context = UIGraphicsGetCurrentContext()!
-    
+
     //// Color Declarations
     let shadowColor = UIColor(red: 0.290, green: 0.290, blue: 0.290, alpha: 0.500)
-    
+
     //// Shadow Declarations
     let shadow = NSShadow()
     shadow.shadowColor = shadowColor
     shadow.shadowOffset = CGSize(width: 0, height: 1)
     shadow.shadowBlurRadius = 4
-    
+
+    //// Variable Declarations
+    let baseColor = isDestination ? UIColor(red: 0, green: 0, blue: 0, alpha: 1) : UIColor(red: 1, green: 1, blue: 1, alpha: 1)
+    let dotColor = isDestination ? UIColor(red: 1, green: 1, blue: 1, alpha: 1) : UIColor(red: 0, green: 0, blue: 0, alpha: 1)
+
     //// Rectangle Drawing
     let rectanglePath = UIBezierPath(roundedRect: CGRect(x: 4, y: 5, width: 18, height: 18), cornerRadius: 5)
     context.saveGState()
     context.setShadow(offset: shadow.shadowOffset, blur: shadow.shadowBlurRadius, color: (shadow.shadowColor as! UIColor).cgColor)
-    UIColor.black.setFill()
+    baseColor.setFill()
     rectanglePath.fill()
     context.restoreGState()
-    
-    
-    
+
     //// Oval Drawing
     let ovalPath = UIBezierPath(ovalIn: CGRect(x: 9.5, y: 10.5, width: 7, height: 7))
-    UIColor.white.setFill()
+    dotColor.setFill()
     ovalPath.fill()
-  }
 }
+
 
 func rendererForOverlay(_ overlay: MKOverlay) -> MKOverlayRenderer? {
   if overlay is MKCircle {
@@ -173,6 +212,13 @@ func annotationViewForAnnotation(_ annotation: MKAnnotation, onMapView mapView: 
     } else {
       return DestinationAnnotationView(annotation: destinationAnnotation, reuseIdentifier: reuseIdentifier)
     }
+  } else if let sourceAnnotation = annotation as? SourceAnnotation{
+    let reuseIdentifier = "SourceAnnotation"
+    if let sourceAnnotationView = mapView.dequeueReusableAnnotationView(withIdentifier: reuseIdentifier) {
+      return sourceAnnotationView
+    } else {
+      return SourceAnnotationView(annotation: sourceAnnotation, reuseIdentifier: reuseIdentifier)
+    }
   } else {
     return nil
   }
@@ -181,6 +227,7 @@ func annotationViewForAnnotation(_ annotation: MKAnnotation, onMapView mapView: 
 enum HyperTrackView {
   case location(CLLocation)
   case locationWithTrip(CLLocation, MovementStatus.Trip)
+  case tripSummary(MovementStatus.Trip)
 }
 
 func putDevice(withCoordinate coordinate: CLLocationCoordinate2D, bearing: CGFloat, accuracy: CLLocationAccuracy, onMapView mapView: MKMapView) {
@@ -236,6 +283,7 @@ func removeDeviceFrom(mapView: MKMapView) {
 
 func removeTripFrom(mapView: MKMapView) {
   remove(annotation: DestinationAnnotation.self, fromMapView: mapView)
+  remove(annotation: SourceAnnotation.self, fromMapView: mapView)
   remove(overlay: MKPolyline.self, fromMapView: mapView)
 }
 
@@ -250,17 +298,70 @@ func putTrip(
   polyline: [CLLocationCoordinate2D]?,
   onMapView mapView: MKMapView) {
   
-  if mapView.annotations.first(ofType: DestinationAnnotation.self) == nil {
+  if let destinationAnnotation = mapView.annotations.first(ofType: DestinationAnnotation.self) {
+    if destinationAnnotation.coordinate.latitude != destinationCoordinate.latitude
+       || destinationAnnotation.coordinate.longitude != destinationCoordinate.longitude  {
+      mapView.removeAnnotation(destinationAnnotation)
+      mapView.addAnnotation(DestinationAnnotation(coordinate: destinationCoordinate))
+    }
+  } else {
     mapView.addAnnotation(DestinationAnnotation(coordinate: destinationCoordinate))
   }
   
+  if let sourceAnnotation = mapView.annotations.first(ofType: SourceAnnotation.self) {
+    mapView.removeAnnotation(sourceAnnotation)
+  }
+  
   remove(overlay: MKPolyline.self, fromMapView: mapView)
+  
   if let polyline = polyline {
     let connectedCurrentLocation = connect(currentCoordinate: coordinate, toEstimatePolyline: polyline)
     let combinedPolyline = connectedCurrentLocation + [destinationCoordinate]
     mapView.addOverlay(MKPolyline(coordinates: combinedPolyline, count: combinedPolyline.count))
   }
   
+}
+
+func putTripSummary(
+  withDestinationCoordinate destinationCoordinate: CLLocationCoordinate2D?,
+  summary: [CLLocationCoordinate2D],
+  onMapView mapView: MKMapView
+) {
+  if let destinationCoordinate = destinationCoordinate {
+    if let destinationAnnotation = mapView.annotations.first(ofType: DestinationAnnotation.self) {
+      if destinationAnnotation.coordinate.latitude != destinationCoordinate.latitude
+         || destinationAnnotation.coordinate.longitude != destinationCoordinate.longitude  {
+        mapView.removeAnnotation(destinationAnnotation)
+        mapView.addAnnotation(DestinationAnnotation(coordinate: destinationCoordinate))
+      }
+    } else {
+      mapView.addAnnotation(DestinationAnnotation(coordinate: destinationCoordinate))
+    }
+  } else {
+    if let destinationAnnotation = mapView.annotations.first(ofType: DestinationAnnotation.self) {
+      mapView.removeAnnotation(destinationAnnotation)
+    }
+  }
+  
+  remove(overlay: MKPolyline.self, fromMapView: mapView)
+  if let coordinate = summary.first {
+    if let sourceAnnotation = mapView.annotations.first(ofType: SourceAnnotation.self) {
+      if sourceAnnotation.coordinate.latitude != coordinate.latitude
+         || sourceAnnotation.coordinate.longitude != coordinate.longitude  {
+        mapView.removeAnnotation(sourceAnnotation)
+        mapView.addAnnotation(SourceAnnotation(coordinate: coordinate))
+      }
+    } else {
+      mapView.addAnnotation(SourceAnnotation(coordinate: coordinate))
+    }
+    if summary.count >= 2 {
+      mapView.addOverlay(MKPolyline(coordinates: summary, count: summary.count))
+    }
+  } else {
+    if let sourceAnnotation = mapView.annotations.first(ofType: SourceAnnotation.self) {
+      mapView.removeAnnotation(sourceAnnotation)
+    }
+  }
 }
 
 func connect(
@@ -294,6 +395,10 @@ func remove<Annotation: MKAnnotation>(annotation: Annotation.Type, fromMapView m
   if let annotation = mapView.annotations.first(ofType: Annotation.self) {
     mapView.removeAnnotation(annotation)
   }
+}
+
+func annotation<Annotation: MKAnnotation>(ofType: Annotation.Type, fromMapView mapView: MKMapView) -> Annotation? {
+  return mapView.annotations.first(ofType: Annotation.self) ?? nil
 }
 
 enum Edges {
@@ -336,20 +441,26 @@ func mapRectFromCoordinates(_ coordinates: [CLLocationCoordinate2D]) -> MKMapRec
   return rects.reduce(MKMapRect.null) { $0.union($1) }
 }
 
-func zoom(withMapInsets mapInsets: Edges?, interfaceInsets: Edges?, onMapView mapView: MKMapView, animated: Bool = true) {
+func zoom(withMapInsets mapInsets: Edges? = nil, interfaceInsets: Edges? = nil, onMapView mapView: MKMapView, animated: Bool = true) {
   if let polyline = polyline(fromMapView: mapView) {
-    let deviceAnnotation = device(fromMapView: mapView)
-    let polylineCoordinates = coordinatesFromMultiPoint(polyline)
-    let coordinates = deviceAnnotation != nil ? polylineCoordinates + [deviceAnnotation!.coordinate] : polylineCoordinates
-    var mapRect = mapRectFromCoordinates(coordinates)
-    if let mapInsets = mapInsets {
-      mapRect = outset(mapRect: mapRect, withEdges: mapInsets)
+    var polylineCoordinates = coordinatesFromMultiPoint(polyline)
+    if let deviceAnnotation = device(fromMapView: mapView) {
+      polylineCoordinates += [deviceAnnotation.coordinate]
     }
-    if let interfaceInsets = interfaceInsets {
-      let (top, leading, bottom, trailing) = interfaceInsets.unpack()
-      mapView.setVisibleMapRect(mapRect, edgePadding: UIEdgeInsets(top: CGFloat(top), left: CGFloat(leading), bottom: CGFloat(bottom), right: CGFloat(trailing)), animated: animated)
-    } else {
-      mapView.setVisibleMapRect(mapRect, animated: animated)
+    if let destinationAnnotation = annotation(ofType: DestinationAnnotation.self, fromMapView: mapView) {
+      polylineCoordinates += [destinationAnnotation.coordinate]
+    }
+    if !polylineCoordinates.isEmpty {
+      var mapRect = mapRectFromCoordinates(polylineCoordinates)
+      if let mapInsets = mapInsets {
+        mapRect = outset(mapRect: mapRect, withEdges: mapInsets)
+      }
+      if let interfaceInsets = interfaceInsets {
+        let (top, leading, bottom, trailing) = interfaceInsets.unpack()
+        mapView.setVisibleMapRect(mapRect, edgePadding: UIEdgeInsets(top: CGFloat(top), left: CGFloat(leading), bottom: CGFloat(bottom), right: CGFloat(trailing)), animated: animated)
+      } else {
+        mapView.setVisibleMapRect(mapRect, animated: animated)
+      }
     }
   } else if let device = device(fromMapView: mapView) {
     var mapRect = MKMapRect(origin: MKMapPoint(device.coordinate), size: MKMapSize())
@@ -426,6 +537,15 @@ func put(_ hyperTrackView: HyperTrackView, onMapView mapView: MKMapView) {
         destinationCoordinate: destinationCoordinate,
         polyline: trip.destination?.estimate?.route.polyline,
         onMapView: mapView)
+    }
+  case let .tripSummary(trip):
+    removeDeviceFrom(mapView: mapView)
+    if let summary = trip.summary?.locations {
+      putTripSummary(
+        withDestinationCoordinate: trip.destination?.coordinate,
+        summary: summary,
+        onMapView: mapView
+      )
     }
   }
 }
