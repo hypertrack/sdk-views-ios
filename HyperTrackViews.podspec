@@ -1,7 +1,7 @@
 Pod::Spec.new do |spec|
   # Spec Metadata
   spec.name         = "HyperTrackViews"
-  spec.version      = "0.3.1"
+  spec.version      = "0.4.0"
   spec.summary      = "Get HyperTrack data directly on your iOS app to build views"
   spec.description  = "The iOS Views SDK is used for getting live location and movement data for devices and trips directly to your iOS app."
   spec.homepage     = "https://hypertrack.com"
@@ -12,10 +12,8 @@ Pod::Spec.new do |spec|
   # Source Location
   spec.source       = { :http => "https://github.com/hypertrack/views-ios/releases/download/#{spec.version}/#{spec.name}.zip" }
   # Source Code
-  spec.source_files  = "#{spec.name}"
+  spec.source_files  = "*"
   spec.swift_versions = ['4.2', '5.0']
-  # Resources
-  spec.resources = "#{spec.name}/*.graphql", "#{spec.name}/*.json"
   # Project Settings
   spec.dependency "AWSAppSync", "2.14.1"
 end
