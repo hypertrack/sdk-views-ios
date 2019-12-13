@@ -1,10 +1,16 @@
 import MapKit
-import Combine
 import HyperTrackViews
 
 class DeviceAnnotation: NSObject, MKAnnotation {
   dynamic var coordinate: CLLocationCoordinate2D
-  @Published var bearing: CGFloat
+  var bearing: CGFloat {
+    willSet {
+      if let delegate = delegate {
+        delegate.updateBearing(newValue)
+      }
+    }
+  }
+  weak var delegate: BearingDelegate?
   
   init(coordinate: CLLocationCoordinate2D, bearing: CGFloat) {
     self.coordinate = coordinate
@@ -14,10 +20,12 @@ class DeviceAnnotation: NSObject, MKAnnotation {
   }
 }
 
-class DeviceAnnotationView: MKAnnotationView {
-  
+protocol BearingDelegate: AnyObject {
+  func updateBearing(_ bearing: CGFloat)
+}
+
+class DeviceAnnotationView: MKAnnotationView, BearingDelegate {
   var bearing: CGFloat = -1.0
-  var cancelBearingSubscription: AnyCancellable?
   
   init(annotation: DeviceAnnotation, reuseIdentifier: String) {
     self.bearing = annotation.bearing
@@ -35,11 +43,14 @@ class DeviceAnnotationView: MKAnnotationView {
     self.backgroundColor = UIColor.clear
     
     if let annotation = self.annotation as? DeviceAnnotation {
-      self.cancelBearingSubscription = annotation.$bearing.sink { bearing in
-        self.bearing = bearing
-        self.setNeedsDisplay()
-      }
+      annotation.delegate = self
     }
+  }
+  
+  func updateBearing(_ bearing: CGFloat) {
+    self.bearing = bearing
+    self.setNeedsDisplay()
+    print("Updated bearing to :\(bearing)")
   }
   
   override func draw(_ rect: CGRect) {
