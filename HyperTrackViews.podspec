@@ -1,7 +1,7 @@
 Pod::Spec.new do |spec|
   # Spec Metadata
   spec.name                = "HyperTrackViews"
-  spec.version             = "0.4.0"
+  spec.version             = "0.5.0"
   spec.summary             = "Get HyperTrack data directly on your iOS app to build views"
   spec.description         = "The iOS Views SDK is used for getting live location and movement data for devices and trips directly to your iOS app."
   spec.homepage            = "https://hypertrack.com"
@@ -21,7 +21,7 @@ Pod::Spec.new do |spec|
   spec.subspec "MapKit" do |subspec|
     subspec.dependency       "HyperTrackViews/Core"
     subspec.source_files   = "MapKit.swift"
-    subspec.ios.frameworks = 'Foundation'
+    subspec.ios.frameworks = 'MapKit'
   end
 
   spec.default_subspec     = "Core"
