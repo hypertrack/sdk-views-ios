@@ -15,7 +15,7 @@ class DeviceAnnotation: NSObject, MKAnnotation {
 let publishableKey = "<#Paste your Publishable Key here#>"
 let deviceID = "<#Paste your Device ID here#>"
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, MKMapViewDelegate {
 
     let hyperTrackViews = HyperTrackViews(publishableKey: publishableKey)
     var deviceAnnotation: DeviceAnnotation?
@@ -25,38 +25,31 @@ class ViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+      mapView.delegate = self
         
         cancelSubscription = hyperTrackViews.subscribeToMovementStatusUpdates(for: deviceID) { [weak self] result in
             guard let self = self else { return }
             
             switch result {
             case let .success(movementStatus):
-                dump(movementStatus)
-                
-                let coordinate = movementStatus.location.coordinate
-               
-                if let deviceAnnotation = self.deviceAnnotation {
-                    deviceAnnotation.coordinate = coordinate
+                if let trip = movementStatus.trips.first {
+                  put(.locationWithTrip(movementStatus.location, trip), onMapView: self.mapView)
                 } else {
-                    let device = DeviceAnnotation(coordinate: coordinate)
-                    self.deviceAnnotation = device
-                    self.mapView.addAnnotation(device)
+                  put(.location(movementStatus.location), onMapView: self.mapView)
                 }
                 
-                let regionRadius: CLLocationDistance = 1000
-                
-                let coordinateRegion: MKCoordinateRegion
-                #if swift(>=4.0)
-                coordinateRegion = MKCoordinateRegion(center: coordinate, latitudinalMeters: regionRadius, longitudinalMeters: regionRadius)
-                #else
-                // If you switch Swift language to 3.0 in Xcode 10.1 this line will run
-                coordinateRegion = MKCoordinateRegionMakeWithDistance(coordinate, regionRadius, regionRadius)
-                #endif
-                
-                self.mapView.setRegion(coordinateRegion, animated: true)
+                zoom(withMapInsets: .all(100), interfaceInsets: nil, onMapView: self.mapView)
             case .failure(let error):
                 dump(error)
             }
         }
     }
+  
+  func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+     return annotationViewForAnnotation(annotation, onMapView: mapView)
+   }
+   
+   func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+     return rendererForOverlay(overlay)!
+   }
 }
