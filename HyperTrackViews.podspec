@@ -1,7 +1,7 @@
 Pod::Spec.new do |spec|
   # Spec Metadata
   spec.name                = "HyperTrackViews"
-  spec.version             = "0.6.0-alpha.5"
+  spec.version             = "0.6.0-alpha.6"
   spec.summary             = "Get HyperTrack data directly on your iOS app to build views"
   spec.description         = "The iOS Views SDK is used for getting live location and movement data for devices and trips directly to your iOS app."
   spec.homepage            = "https://hypertrack.com"
@@ -29,5 +29,5 @@ Pod::Spec.new do |spec|
 
   spec.swift_versions      = ['4.2', '5.0']
   # Project Settings
-  spec.dependency            "AWSAppSync", "3.0.0"
+  spec.dependency            "AWSAppSync", "3.0.2"
 end
