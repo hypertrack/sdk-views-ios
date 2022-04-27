@@ -149,3 +149,7 @@ public var datatypeValue: Blob {
 ```
 
 Select `Unlock` when Xcode prompts, then build the project. You'll need to change `datatypeValue` function every pod reinstall, until [this issue](https://github.com/stephencelis/SQLite.swift/issues/920) is closed.
+
+## Reference
+
+[HyperTrack Views iOS SDK Reference](https://hypertrack.github.io/sdk-views-ios/documentation/hypertrackviews/)
