@@ -152,4 +152,4 @@ Select `Unlock` when Xcode prompts, then build the project. You'll need to chang
 
 ## Reference
 
-[HyperTrack Views iOS SDK Reference](https://hypertrack.github.io/sdk-views-ios/documentation/hypertrackviews/)
+[iOS Views SDK Reference](https://hypertrack.github.io/sdk-views-ios/documentation/hypertrackviews/)
